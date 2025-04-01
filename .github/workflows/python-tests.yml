@@ -26,26 +26,29 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
     
-    - name: Install dependencies
+    - name: Create virtual environment using uv
+      run: uv venv .venv
+    
+    - name: Install dependencies using uv
       run: |
-        uv pip install --upgrade pip
         uv add -e ".[dev]"
+        uv sync
     
-    - name: Check code style with black
+    - name: Check code style with black using uv run
       run: |
-        black . --check
+        uv run black . --check
     
-    - name: Check imports with isort
+    - name: Check imports with isort using uv run
       run: |
-        isort . --check-only --diff
+        uv run isort . --check-only --diff
     
-    - name: Type check with mypy
+    - name: Type check with mypy using uv run
       run: |
-        mypy langmask tests
+        uv run mypy langmask tests
     
-    - name: Run tests with pytest
+    - name: Run tests with pytest using uv run
       run: |
-        pytest tests/ -v --cov=langmask --cov-report=xml
+        uv run pytest tests/ -v --cov=langmask --cov-report=xml
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
