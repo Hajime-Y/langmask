@@ -31,8 +31,7 @@ jobs:
     
     - name: Install dependencies using uv
       run: |
-        uv add -e ".[dev]"
-        uv sync
+        uv sync --extra dev
     
     - name: Check code style with black using uv run
       run: |
