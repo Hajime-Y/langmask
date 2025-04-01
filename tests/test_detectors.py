@@ -1,4 +1,5 @@
 import pytest
+
 from langmask.detectors.asian import is_chinese, is_japanese, is_korean
 from langmask.detectors.european import is_english
 

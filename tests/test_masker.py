@@ -1,4 +1,5 @@
 import pytest
+
 from langmask.masker import MultilingualTokenMasker
 
 
