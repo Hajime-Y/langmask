@@ -157,7 +157,7 @@ LangMaskは、LLMの生成過程でlogitsと呼ばれる次トークンの確率
 2. 新しいブランチを作成します (`git checkout -b feature/amazing-feature`)
 3. 開発環境をセットアップします:
    ```bash
-   git clone https://github.com/[YourUsername]/langmask.git
+   git clone https://github.com/Hajime-Y/langmask.git
    cd langmask
    python -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
