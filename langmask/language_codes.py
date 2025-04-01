@@ -12,5 +12,5 @@ SUPPORTED_LANGUAGES = {
     "ES": "Spanish",
     "IT": "Italian",
     "RU": "Russian",
-    "PT": "Portuguese"
+    "PT": "Portuguese",
 }
