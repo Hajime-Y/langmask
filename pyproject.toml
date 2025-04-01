@@ -37,4 +37,9 @@ line_length = 88
 
 [tool.mypy]
 python_version = "3.9"
-strict = true 
+strict = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "transformers.*"
+ignore_missing_imports = true 
