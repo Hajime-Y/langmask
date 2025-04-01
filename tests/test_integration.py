@@ -4,20 +4,20 @@ from langmask import MultilingualLanguageModel
 
 
 @pytest.fixture
-def model():
+def model() -> MultilingualLanguageModel:
     return MultilingualLanguageModel(
         model_name="Qwen/Qwen-7B-Chat",
         allowed_languages=["JA"],
     )
 
 
-def test_japanese_generation(model):
+def test_japanese_generation(model: MultilingualLanguageModel) -> None:
     response = model.generate("AIについて説明してください")
     # 日本語文字が含まれていることを確認
-    assert any("\u3040" <= c <= "\u309f" or "\u4e00" <= c <= "\u9fff" for c in response)
+    assert any("\u3040" <= c <= "\u309F" or "\u4E00" <= c <= "\u9FFF" for c in response)
 
 
-def test_language_switching(model):
+def test_language_switching(model: MultilingualLanguageModel) -> None:
     # 日本語生成
     ja_response = model.generate("こんにちは")
 
@@ -29,7 +29,7 @@ def test_language_switching(model):
     assert all(ord(c) < 128 for c in en_response if not c.isspace())
 
 
-def test_mask_strength_effect(model):
+def test_mask_strength_effect(model: MultilingualLanguageModel) -> None:
     # 強いマスキング
     model.set_mask_strength(1.0)
     strict_response = model.generate("AIについて説明してください")
