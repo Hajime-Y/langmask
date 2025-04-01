@@ -1,5 +1,5 @@
 import pytest
 
 
-def test_dummy_masker():
+def test_dummy_masker() -> None:
     assert True
