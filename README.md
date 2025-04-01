@@ -2,7 +2,7 @@
 
 [![PyPI version](https://badge.fury.io/py/langmask.svg)](https://badge.fury.io/py/langmask)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Documentation Status](https://readthedocs.org/projects/langmask/badge/?version=latest)](https://langmask.readthedocs.io/en/latest/?badge=latest)
 
 LangMask（ラングマスク）は大規模言語モデル（LLM）の出力言語を制御するためのPythonライブラリです。QwenやLlamaなどの多言語モデルでも、特定の言語だけで応答するよう制御できます。
@@ -170,7 +170,7 @@ LangMaskは、LLMの生成過程でlogitsと呼ばれる次トークンの確率
 
 ## ライセンス
 
-MITライセンスの下で配布されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+Apache License 2.0の下で配布されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
 
 ## 引用
 
