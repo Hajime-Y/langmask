@@ -3,7 +3,7 @@ Core token masking logic for LangMask.
 """
 
 import logging
-from typing import Dict, List, Optional, Set, Callable
+from typing import Callable, Dict, List, Optional, Set
 
 import torch
 from transformers import (
