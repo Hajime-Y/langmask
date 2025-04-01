@@ -2,18 +2,19 @@
 Core token masking logic for LangMask.
 """
 
-import torch
-from typing import List, Dict, Set, Optional
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    PreTrainedTokenizer,
-    PreTrainedModel,
-)
 import logging
+from typing import Dict, List, Optional, Set
 
-from .language_codes import SUPPORTED_LANGUAGES
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
+
 from .detectors import is_language_token
+from .language_codes import SUPPORTED_LANGUAGES
 
 # Logger setup
 logging.basicConfig(

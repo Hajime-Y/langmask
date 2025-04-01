@@ -2,18 +2,19 @@
 High-level interface for using language-masked models.
 """
 
-import torch
-from typing import List, Dict, Optional, Any, Union
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    PreTrainedTokenizer,
-    PreTrainedModel,
-)
 import logging
+from typing import Any, Dict, List, Optional, Union
 
-from .masker import MultilingualTokenMasker
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
+
 from .language_codes import SUPPORTED_LANGUAGES
+from .masker import MultilingualTokenMasker
 
 # Logger setup
 logging.basicConfig(

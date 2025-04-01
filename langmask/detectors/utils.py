@@ -3,15 +3,16 @@ Utility functions for language detection in tokens.
 """
 
 from typing import Callable, Dict
-from .asian import is_japanese_char, is_chinese_char, is_korean_char
+
+from .asian import is_chinese_char, is_japanese_char, is_korean_char
 from .european import (
     is_english_char,
     is_french_char,
     is_german_char,
-    is_spanish_char,
     is_italian_char,
-    is_russian_char,
     is_portuguese_char,
+    is_russian_char,
+    is_spanish_char,
 )
 
 # Mapping from language code to character detection function
