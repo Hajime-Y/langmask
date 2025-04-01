@@ -8,7 +8,9 @@ from langmask.masker import MultilingualTokenMasker
 def masker() -> MultilingualTokenMasker:
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-7B-Chat")
     model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-7B-Chat")
-    return MultilingualTokenMasker(tokenizer=tokenizer, model=model, allowed_languages=["JA", "EN"])
+    return MultilingualTokenMasker(
+        tokenizer=tokenizer, model=model, allowed_languages=["JA", "EN"]
+    )
 
 
 def test_masker_initialization(masker: MultilingualTokenMasker) -> None:
