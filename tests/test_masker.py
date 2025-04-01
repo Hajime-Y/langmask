@@ -6,8 +6,8 @@ from langmask.masker import MultilingualTokenMasker
 
 @pytest.fixture
 def masker() -> MultilingualTokenMasker:
-    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-7B-Chat")
-    model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-7B-Chat")
+    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-7B-Chat", trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-7B-Chat", trust_remote_code=True)
     return MultilingualTokenMasker(
         tokenizer=tokenizer, model=model, allowed_languages=["JA", "EN"]
     )

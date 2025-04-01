@@ -8,13 +8,14 @@ def model() -> MultilingualLanguageModel:
     return MultilingualLanguageModel(
         model_name="Qwen/Qwen-7B-Chat",
         allowed_languages=["JA"],
+        trust_remote_code=True,
     )
 
 
 def test_japanese_generation(model: MultilingualLanguageModel) -> None:
     response = model.generate("AIについて説明してください")
     # 日本語文字が含まれていることを確認
-    assert any("\u3040" <= c <= "\u309f" or "\u4e00" <= c <= "\u9fff" for c in response)
+    assert any("\u3040" <= c <= "\u309F" or "\u4E00" <= c <= "\u9FFF" for c in response)
 
 
 def test_language_switching(model: MultilingualLanguageModel) -> None:
