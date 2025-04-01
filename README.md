@@ -30,7 +30,7 @@ uv add git+https://github.com/Hajime-Y/langmask.git
 # 方法3: 開発用インストール（コントリビューター向け）
 git clone https://github.com/Hajime-Y/langmask.git
 cd langmask
-uv add -e ".[dev]"
+uv sync --extra dev
 ```
 
 ## 使用例
@@ -162,7 +162,7 @@ LangMaskは、LLMの生成過程でlogitsと呼ばれる次トークンの確率
    python -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
    curl -LsSf https://astral.sh/uv/install.sh | sh  # uvのインストール
-   uv add -e ".[dev]"  # 開発用依存関係のインストール
+   uv sync --extra dev  # 開発用依存関係のインストール
    ```
 4. 変更をコミットします (`git commit -m 'Add some amazing feature'`)
 5. ブランチをプッシュします (`git push origin feature/amazing-feature`)
@@ -177,11 +177,11 @@ Apache License 2.0の下で配布されています。詳細は[LICENSE](LICENSE
 このライブラリを研究で使用する場合は、以下の形式で引用してください：
 
 ```
-@software{langmask2024,
-  author = {Your Name},
+@software{langmask2025,
+  author = {Hajime Yagihara},
   title = {LangMask: A Library for Controlling Output Languages in Large Language Models},
-  year = {2024},
-  url = {https://github.com/yourusername/langmask}
+  year = {2025},
+  url = {https://github.com/Hajime-Y/langmask}
 }
 ```
 
