@@ -3,7 +3,7 @@ Core token masking logic for LangMask.
 """
 
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Callable
 
 import torch
 from transformers import (
@@ -208,21 +208,22 @@ class MultilingualTokenMasker:
             vocab_size, device=self.device, dtype=torch.float32
         )
         if valid_allowed_ids:
-            disallowed_mask[valid_allowed_ids] = 0.0
+            # Use torch.tensor to initialize with valid_allowed_ids, ensuring correct device and type
+            allowed_indices = torch.tensor(valid_allowed_ids, device=self.device, dtype=torch.long)
+            disallowed_mask[allowed_indices] = 0.0
 
         # Calculate penalty
+        penalty: torch.Tensor  # Add type annotation
         if self.mask_strength >= 0.9999:  # Use a threshold for hard masking
-            penalty = -torch.finfo(logits.dtype).max  # Effectively negative infinity
+            penalty = torch.tensor(-torch.finfo(logits.dtype).max, device=self.device) # Ensure tensor is on correct device
         else:
             # Scale penalty based on mask strength.
-            # The scaling factor needs careful tuning. A large negative value works.
-            # Using a large constant factor ensures significant suppression.
+            # Using torch.log for calculation, ensure the input is a tensor
             penalty_factor = 100.0  # Adjust this factor based on testing
             penalty = penalty_factor * torch.log(
                 torch.tensor(1.0 - self.mask_strength + 1e-9, device=self.device)
             )
-            # Alternative: penalty = -penalty_factor * (self.mask_strength / (1.0 - self.mask_strength + 1e-9))
-            penalty = penalty.to(logits.dtype)  # Ensure penalty matches logits dtype
+        penalty = penalty.to(logits.dtype)  # Ensure penalty matches logits dtype
 
         # Apply penalty: Add a large negative value to disallowed token logits
         # Ensure broadcasting works correctly (disallowed_mask needs to match the last dim of logits)
@@ -230,10 +231,10 @@ class MultilingualTokenMasker:
 
         return modified_logits
 
-    def logits_processor(self):
+    def logits_processor(self) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]: # Add return type annotation
         """Return a callable logits processor compatible with Hugging Face's generate."""
 
-        def process_logits(input_ids, logits):
+        def process_logits(input_ids: torch.Tensor, logits: torch.Tensor) -> torch.Tensor: # Add argument type annotations and return type
             # Logits shape: (batch_size, sequence_length, vocab_size)
             # We need to apply the mask to the last prediction logits
             # In HF generate, logits passed here are usually (batch_size, vocab_size)
@@ -349,21 +350,23 @@ class MultilingualTokenMasker:
             verbose: Whether to print detailed classification results.
 
         Returns:
-            A dictionary mapping language codes (plus 'SPECIAL', 'UNKNOWN') to token counts.
+            A dictionary mapping language codes to the count of tokens classified for that language.
         """
+        if not text:
+            return {}
+
         tokens = self.tokenizer.tokenize(text)
         token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
 
-        classification = {lang: [] for lang in SUPPORTED_LANGUAGES}
-        classification["SPECIAL"] = []
-        classification["UNKNOWN"] = []
-        classification["NEUTRAL"] = []  # For spaces, numbers, common punctuation
+        classification: Dict[str, int] = {lang: 0 for lang in SUPPORTED_LANGUAGES} # Add type annotation
+        classification["UNK"] = 0  # For unknown or mixed tokens
+        classification["SPECIAL"] = 0 # For special tokens
 
         special_ids = self._special_token_ids
 
         for token_str, token_id in zip(tokens, token_ids):
             if token_id in special_ids:
-                classification["SPECIAL"].append(token_str)
+                classification["SPECIAL"] += 1
                 continue
 
             # Basic check for neutrals first (can customize is_language_token for this)
@@ -376,7 +379,7 @@ class MultilingualTokenMasker:
                 decoded_token = token_str[2:]
 
             if not decoded_token:  # Handle cases like 'Ġ' itself if it's a token
-                classification["SPECIAL"].append(token_str)  # Treat as special/control
+                classification["SPECIAL"] += 1 # Treat as special/control
                 continue
 
             if (
@@ -384,7 +387,7 @@ class MultilingualTokenMasker:
                 or decoded_token.isdigit()
                 or (len(decoded_token) == 1 and not decoded_token.isalnum())
             ):
-                classification["NEUTRAL"].append(token_str)
+                classification["NEUTRAL"] += 1
                 continue
 
             classified = False
@@ -392,16 +395,16 @@ class MultilingualTokenMasker:
                 if is_language_token(
                     token_str, lang_code, threshold=self.token_threshold
                 ):
-                    classification[lang_code].append(token_str)
+                    classification[lang_code] += 1
                     classified = True
                     # Decide if a token can belong to multiple languages or just the first match
                     # break # Uncomment for first match only
 
             if not classified:
-                classification["UNKNOWN"].append(token_str)
+                classification["UNK"] += 1
 
         # Calculate stats
-        stats = {lang: len(tokens) for lang, tokens in classification.items()}
+        stats = {lang: count for lang, count in classification.items()}
         total_tokens = len(tokens)
 
         if verbose:
