@@ -209,13 +209,17 @@ class MultilingualTokenMasker:
         )
         if valid_allowed_ids:
             # Use torch.tensor to initialize with valid_allowed_ids, ensuring correct device and type
-            allowed_indices = torch.tensor(valid_allowed_ids, device=self.device, dtype=torch.long)
+            allowed_indices = torch.tensor(
+                valid_allowed_ids, device=self.device, dtype=torch.long
+            )
             disallowed_mask[allowed_indices] = 0.0
 
         # Calculate penalty
         penalty: torch.Tensor  # Add type annotation
         if self.mask_strength >= 0.9999:  # Use a threshold for hard masking
-            penalty = torch.tensor(-torch.finfo(logits.dtype).max, device=self.device) # Ensure tensor is on correct device
+            penalty = torch.tensor(
+                -torch.finfo(logits.dtype).max, device=self.device
+            )  # Ensure tensor is on correct device
         else:
             # Scale penalty based on mask strength.
             # Using torch.log for calculation, ensure the input is a tensor
@@ -231,10 +235,16 @@ class MultilingualTokenMasker:
 
         return modified_logits
 
-    def logits_processor(self) -> Callable[[torch.Tensor, torch.Tensor], torch.Tensor]: # Add return type annotation
+    def logits_processor(
+        self,
+    ) -> Callable[
+        [torch.Tensor, torch.Tensor], torch.Tensor
+    ]:  # Add return type annotation
         """Return a callable logits processor compatible with Hugging Face's generate."""
 
-        def process_logits(input_ids: torch.Tensor, logits: torch.Tensor) -> torch.Tensor: # Add argument type annotations and return type
+        def process_logits(
+            input_ids: torch.Tensor, logits: torch.Tensor
+        ) -> torch.Tensor:  # Add argument type annotations and return type
             # Logits shape: (batch_size, sequence_length, vocab_size)
             # We need to apply the mask to the last prediction logits
             # In HF generate, logits passed here are usually (batch_size, vocab_size)
@@ -358,9 +368,11 @@ class MultilingualTokenMasker:
         tokens = self.tokenizer.tokenize(text)
         token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
 
-        classification: Dict[str, int] = {lang: 0 for lang in SUPPORTED_LANGUAGES} # Add type annotation
+        classification: Dict[str, int] = {
+            lang: 0 for lang in SUPPORTED_LANGUAGES
+        }  # Add type annotation
         classification["UNK"] = 0  # For unknown or mixed tokens
-        classification["SPECIAL"] = 0 # For special tokens
+        classification["SPECIAL"] = 0  # For special tokens
 
         special_ids = self._special_token_ids
 
@@ -379,7 +391,7 @@ class MultilingualTokenMasker:
                 decoded_token = token_str[2:]
 
             if not decoded_token:  # Handle cases like 'Ġ' itself if it's a token
-                classification["SPECIAL"] += 1 # Treat as special/control
+                classification["SPECIAL"] += 1  # Treat as special/control
                 continue
 
             if (
