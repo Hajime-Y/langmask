@@ -15,7 +15,6 @@ from transformers import (
 )
 from transformers.generation.utils import GenerateOutput
 from transformers.modeling_utils import GenerationMixin as BaseGenerationMixin
-from transformers.modeling_utils import PreTrainedModel as BasePreTrainedModel
 
 from .language_codes import SUPPORTED_LANGUAGES
 from .masker import MultilingualTokenMasker
@@ -26,7 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-ModelType = TypeVar("ModelType", bound=PreTrainedModel)
+ModelType = TypeVar("ModelType", bound="PreTrainedModel")
 
 
 class MultilingualLanguageModel(PreTrainedModel, Generic[ModelType]):
