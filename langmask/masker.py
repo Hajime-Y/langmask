@@ -155,9 +155,17 @@ class MultilingualTokenMasker:
             if token_id in self._special_token_ids:
                 continue
 
-            # Use the utility function from detectors
-            if is_language_token(token_str, lang, threshold=self.token_threshold):
-                language_token_ids.add(token_id)
+            try:
+                # トークンを元のUnicode文字列にデコード
+                decoded = self.tokenizer.decode([token_id])
+                # デコードされた文字列に対して言語判定を行う
+                if is_language_token(decoded, lang, threshold=self.token_threshold):
+                    language_token_ids.add(token_id)
+            except Exception as e:
+                logger.debug(
+                    f"Failed to process token {token_str} (ID: {token_id}): {e}"
+                )
+                continue
 
         logger.debug(f"Identified {len(language_token_ids)} tokens for language {lang}")
         return language_token_ids
@@ -267,7 +275,11 @@ class MultilingualTokenMasker:
 
     def set_mask_strength(self, strength: float) -> None:
         """Set the masking strength (0.0 to 1.0)."""
-        self.mask_strength = max(0.0, min(1.0, strength))
+        if not 0.0 <= strength <= 1.0:
+            raise ValueError(
+                f"Mask strength must be between 0.0 and 1.0, got {strength}"
+            )
+        self.mask_strength = strength
         logger.info(f"Mask strength set to: {self.mask_strength:.2f}")
 
     def set_token_threshold(self, threshold: float) -> None:
@@ -368,70 +380,77 @@ class MultilingualTokenMasker:
         tokens = self.tokenizer.tokenize(text)
         token_ids = self.tokenizer.convert_tokens_to_ids(tokens)
 
-        classification: Dict[str, int] = {
-            lang: 0 for lang in SUPPORTED_LANGUAGES
-        }  # Add type annotation
+        classification: Dict[str, int] = {lang: 0 for lang in SUPPORTED_LANGUAGES}
         classification["UNK"] = 0  # For unknown or mixed tokens
         classification["SPECIAL"] = 0  # For special tokens
-
-        special_ids = self._special_token_ids
-
-        for token_str, token_id in zip(tokens, token_ids):
-            if token_id in special_ids:
-                classification["SPECIAL"] += 1
-                continue
-
-            # Basic check for neutrals first (can customize is_language_token for this)
-            decoded_token = token_str
-            if token_str.startswith("Ġ"):
-                decoded_token = token_str[1:]
-            elif token_str.startswith(" "):
-                decoded_token = token_str[1:]
-            elif token_str.startswith("##"):
-                decoded_token = token_str[2:]
-
-            if not decoded_token:  # Handle cases like 'Ġ' itself if it's a token
-                classification["SPECIAL"] += 1  # Treat as special/control
-                continue
-
-            if (
-                decoded_token.isspace()
-                or decoded_token.isdigit()
-                or (len(decoded_token) == 1 and not decoded_token.isalnum())
-            ):
-                classification["NEUTRAL"] += 1
-                continue
-
-            classified = False
-            for lang_code in SUPPORTED_LANGUAGES:
-                if is_language_token(
-                    token_str, lang_code, threshold=self.token_threshold
-                ):
-                    classification[lang_code] += 1
-                    classified = True
-                    # Decide if a token can belong to multiple languages or just the first match
-                    # break # Uncomment for first match only
-
-            if not classified:
-                classification["UNK"] += 1
-
-        # Calculate stats
-        stats = {lang: count for lang, count in classification.items()}
-        total_tokens = len(tokens)
 
         if verbose:
             print(f"--- Token Classification Debug ---")
             print(f'Text: "{text}"')
-            print(f"Total Tokens: {total_tokens}")
-            for lang_code, count in stats.items():
+            print(f"Total Tokens: {len(tokens)}")
+            print("Token Analysis:")
+
+        for token_str, token_id in zip(tokens, token_ids):
+            if token_id in self._special_token_ids:
+                classification["SPECIAL"] += 1
+                if verbose:
+                    print(f"  Token: {token_str} (ID: {token_id}) -> SPECIAL")
+                continue
+
+            try:
+                # トークンを元のUnicode文字列にデコード
+                decoded = self.tokenizer.decode([token_id]).strip()
+                if not decoded:
+                    classification["SPECIAL"] += 1
+                    if verbose:
+                        print(f"  Token: {token_str} (ID: {token_id}) -> EMPTY")
+                    continue
+
+                if decoded.isspace():
+                    classification["SPECIAL"] += 1
+                    if verbose:
+                        print(f"  Token: {token_str} (ID: {token_id}) -> WHITESPACE")
+                    continue
+
+                # 言語判定
+                detected_langs = []
+                for lang_code in SUPPORTED_LANGUAGES:
+                    if is_language_token(
+                        decoded, lang_code, threshold=self.token_threshold
+                    ):
+                        detected_langs.append(lang_code)
+                        classification[lang_code] += 1
+
+                if not detected_langs:
+                    classification["UNK"] += 1
+                    if verbose:
+                        print(f"  Token: {token_str} (ID: {token_id}) -> UNKNOWN")
+                        print(f"    Decoded: {decoded!r}")
+                else:
+                    if verbose:
+                        print(
+                            f"  Token: {token_str} (ID: {token_id}) -> {', '.join(detected_langs)}"
+                        )
+                        print(f"    Decoded: {decoded!r}")
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to process token {token_str} (ID: {token_id}): {e}"
+                )
+                classification["UNK"] += 1
+                if verbose:
+                    print(f"  Token: {token_str} (ID: {token_id}) -> ERROR: {e}")
+
+        if verbose:
+            print("\nLanguage Statistics:")
+            total_tokens = len(tokens)
+            for lang_code, count in classification.items():
                 if count > 0:
                     percentage = (count / total_tokens * 100) if total_tokens > 0 else 0
-                    lang_name = SUPPORTED_LANGUAGES.get(
-                        lang_code, lang_code
-                    )  # Use code if not in map (e.g., SPECIAL)
+                    lang_name = SUPPORTED_LANGUAGES.get(lang_code, lang_code)
                     print(
                         f"  {lang_code} ({lang_name}): {count} tokens ({percentage:.1f}%)"
                     )
-            print(f"------------------------------------")
+            print("------------------------------------")
 
-        return stats
+        return classification

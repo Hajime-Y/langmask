@@ -11,8 +11,8 @@ def test_japanese_detection() -> None:
 
 
 def test_english_detection() -> None:
-    assert is_english_char("Hello World") is True
-    assert is_english_char("こんにちは") is False
+    assert all(is_english_char(c) for c in "Hello World")
+    assert not any(is_english_char(c) for c in "こんにちは")
     assert is_english_char("Hello、世界！") is True  # 混合テキスト
 
 

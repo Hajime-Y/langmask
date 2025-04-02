@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 import torch
 from transformers import (
     AutoModelForCausalLM,
-    AutoTokenizer,
+    GenerationMixin,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
@@ -23,69 +23,43 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class MultilingualLanguageModel:
+class MultilingualLanguageModel(PreTrainedModel, GenerationMixin):
     """
-    A user-friendly wrapper around a Hugging Face model and the MultilingualTokenMasker.
-    Handles model/tokenizer loading and provides methods for generation and configuration.
+    A language-masked wrapper around a Hugging Face model.
+    Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
     """
 
     def __init__(
         self,
-        model_name: str,
+        model: PreTrainedModel,
+        tokenizer: PreTrainedTokenizer,
         mask_strength: float = 0.8,
         allowed_languages: List[str] = ["JA"],
         token_threshold: float = 0.5,
         cache_tokens: bool = True,
-        device: Optional[str] = None,
-        trust_remote_code: bool = False,
-        model_kwargs: Optional[
-            Dict[str, Any]
-        ] = None,  # For AutoModelForCausalLM.from_pretrained
-        tokenizer_kwargs: Optional[
-            Dict[str, Any]
-        ] = None,  # For AutoTokenizer.from_pretrained
     ):
         """
         Initializes the MultilingualLanguageModel.
 
         Args:
-            model_name: The name or path of the Hugging Face model to load.
+            model: The base Hugging Face model to wrap.
+            tokenizer: The tokenizer associated with the model.
             mask_strength: Initial masking strength (0.0 to 1.0).
             allowed_languages: List of initially allowed language codes.
             token_threshold: Threshold for classifying tokens by language.
             cache_tokens: Whether to cache language-specific token IDs.
-            device: The device to load the model onto ('cuda', 'cpu', or None for auto-detect).
-            trust_remote_code: Whether to trust remote code when loading the model.
-            model_kwargs: Additional keyword arguments passed to AutoModelForCausalLM.from_pretrained.
-            tokenizer_kwargs: Additional keyword arguments passed to AutoTokenizer.from_pretrained.
         """
-        self._model_name = model_name
-        self._device = (
-            device if device else ("cuda" if torch.cuda.is_available() else "cpu")
-        )
+        # Initialize parent class with the base model's config
+        super().__init__(model.config)
 
-        _model_kwargs = model_kwargs or {}
-        _tokenizer_kwargs = tokenizer_kwargs or {}
-
-        # Add trust_remote_code to kwargs
-        _model_kwargs["trust_remote_code"] = trust_remote_code
-        _tokenizer_kwargs["trust_remote_code"] = trust_remote_code
-
-        logger.info(f"Loading tokenizer: {model_name}")
-        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
-            model_name, **_tokenizer_kwargs
-        )
-
-        logger.info(f"Loading model: {model_name} onto device: {self._device}")
-        self.model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
-            model_name, **_model_kwargs
-        ).to(self._device)
-        self.model.eval()  # Set model to evaluation mode
+        self.base_model = model
+        self._device = model.device
+        self.config = model.config
 
         logger.info("Initializing MultilingualTokenMasker...")
         self.masker = MultilingualTokenMasker(
-            tokenizer=self.tokenizer,
-            model=self.model,  # Pass model reference for device consistency etc.
+            tokenizer=tokenizer,
+            model=model,
             device=self._device,
             default_mask_strength=mask_strength,
             allowed_languages=allowed_languages,
@@ -94,79 +68,73 @@ class MultilingualLanguageModel:
         )
         logger.info("MultilingualLanguageModel initialized successfully.")
 
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Forward pass of the model.
+        Delegates to the base model's forward pass.
+        """
+        return self.base_model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            **kwargs,
+        )
+
+    def prepare_inputs_for_generation(
+        self, input_ids: torch.Tensor, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """
+        Prepare inputs for generation.
+        Delegates to the base model's preparation method.
+        """
+        return self.base_model.prepare_inputs_for_generation(input_ids, **kwargs)
+
+    def _reorder_cache(self, past: Any, beam_idx: torch.Tensor) -> Any:
+        """
+        Reorder the cache for beam search.
+        Delegates to the base model's cache reordering method.
+        """
+        return self.base_model._reorder_cache(past, beam_idx)
+
     def generate(
         self,
-        prompt: str,
-        max_length: Optional[
-            int
-        ] = None,  # Default behavior often depends on model config
-        max_new_tokens: Optional[int] = 200,  # More explicit control over output length
-        temperature: float = 0.7,
-        top_p: float = 0.9,
-        do_sample: bool = True,
-        num_return_sequences: int = 1,
-        **kwargs: Any,  # Passthrough for other generate() arguments
-    ) -> Union[str, List[str]]:
+        input_ids: Optional[torch.Tensor] = None,
+        attention_mask: Optional[torch.Tensor] = None,
+        **kwargs: Any,
+    ) -> Union[torch.Tensor, Dict[str, Any]]:
         """
-        Generate text from a prompt using the language-masked model.
+        Generate text using the language-masked model.
+        Accepts the same arguments as the base model's generate method.
 
         Args:
-            prompt: The input text prompt.
-            max_length: Max total length (prompt + generated). Overrides max_new_tokens if set.
-            max_new_tokens: Max number of new tokens to generate.
-            temperature: Sampling temperature. Higher values mean more randomness.
-            top_p: Nucleus sampling probability.
-            do_sample: Whether to use sampling; set to False for greedy decoding.
-            num_return_sequences: Number of sequences to generate.
-            **kwargs: Additional arguments passed to the underlying model.generate() method.
+            input_ids: Input token IDs.
+            attention_mask: Attention mask.
+            **kwargs: Additional arguments passed to the base model's generate method.
 
         Returns:
-            The generated text string, or a list of strings if num_return_sequences > 1.
+            Generated token IDs or a dictionary containing generation information.
         """
-        logger.debug(f'Generating text for prompt: "{prompt[:50]}..."')
-
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self._device)
-        input_ids = inputs["input_ids"]
-        attention_mask = inputs.get("attention_mask")  # Use attention mask if available
-
-        # Prepare generate arguments
-        generate_kwargs = {
-            "max_new_tokens": max_new_tokens,
-            "temperature": temperature,
-            "top_p": top_p,
-            "do_sample": do_sample,
-            "num_return_sequences": num_return_sequences,
-            "pad_token_id": self.tokenizer.eos_token_id,  # Common practice for open-ended generation
-            "attention_mask": attention_mask,
-            **kwargs,  # Allow overriding defaults or adding more params
-        }
-
-        # Override max_new_tokens with max_length if provided
-        if max_length is not None:
-            generate_kwargs.pop(
-                "max_new_tokens", None
-            )  # Remove max_new_tokens if max_length is set
-            generate_kwargs["max_length"] = max_length
-
         # Add the logits processor from the masker
-        generate_kwargs["logits_processor"] = [self.masker.logits_processor()]
+        kwargs["logits_processor"] = kwargs.get("logits_processor", [])
+        kwargs["logits_processor"].append(self.masker.logits_processor())
 
-        with torch.no_grad():  # Ensure no gradients are computed during inference
-            outputs = self.model.generate(input_ids, **generate_kwargs)
+        # Ensure pad_token_id and eos_token_id are set if not provided
+        if "pad_token_id" not in kwargs and hasattr(self.config, "pad_token_id"):
+            kwargs["pad_token_id"] = self.config.pad_token_id
+        if "eos_token_id" not in kwargs and hasattr(self.config, "eos_token_id"):
+            kwargs["eos_token_id"] = self.config.eos_token_id
 
-        # Decode the generated sequences
-        # Handle batch generation (num_return_sequences > 1)
-        decoded_outputs = []
-        for i in range(num_return_sequences):
-            # Slice output to remove the prompt tokens
-            output_sequence = outputs[i, input_ids.shape[-1] :]
-            decoded = self.tokenizer.decode(output_sequence, skip_special_tokens=True)
-            decoded_outputs.append(decoded.strip())
+        return self.base_model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            **kwargs,
+        )
 
-        logger.debug(f"Generated {len(decoded_outputs)} sequences.")
-        return decoded_outputs[0] if num_return_sequences == 1 else decoded_outputs
-
-    # --- Configuration Wrappers ---
+    # --- Configuration Methods ---
 
     def set_mask_strength(self, strength: float) -> None:
         """Set the language masking strength (0.0 to 1.0)."""
@@ -192,30 +160,21 @@ class MultilingualLanguageModel:
         """Get the currently allowed language codes."""
         return self.masker.allowed_languages
 
-    # --- Accessors and Debug ---
-
-    @property
-    def underlying_model(self) -> PreTrainedModel:
-        """Access the underlying Hugging Face model."""
-        return self.model
-
-    @property
-    def underlying_tokenizer(self) -> PreTrainedTokenizer:
-        """Access the underlying Hugging Face tokenizer."""
-        return self.tokenizer
-
-    @property
-    def underlying_masker(self) -> MultilingualTokenMasker:
-        """Access the underlying MultilingualTokenMasker instance."""
-        return self.masker
-
-    def supported_languages(self) -> Dict[str, str]:
-        """Get the dictionary of supported language codes and names."""
-        # This information is static and stored in language_codes.py
-        return SUPPORTED_LANGUAGES
+    # --- Debug Methods ---
 
     def debug_token_classification(
-        self, text: str, verbose: bool = True
+        self, text: str, tokenizer: PreTrainedTokenizer, verbose: bool = True
     ) -> Dict[str, int]:
         """Analyze and print the language classification of tokens in a text."""
         return self.masker.debug_token_classification(text, verbose=verbose)
+
+    @property
+    def device(self) -> torch.device:
+        """Get the device the model is on."""
+        return self._device
+
+    @device.setter
+    def device(self, device: Union[str, torch.device]) -> None:
+        """Set the device for the model."""
+        self._device = torch.device(device)
+        self.base_model.to(self._device)

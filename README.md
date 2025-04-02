@@ -14,6 +14,7 @@ LangMask（ラングマスク）は大規模言語モデル（LLM）の出力言
 - 🎛️ 調整可能なマスキング強度（ソフトからハードまで）
 - 📊 詳細なトークン分類と可視化
 - 🚀 Hugging Faceモデルとの簡単な統合
+- 🔌 標準的なHugging Faceインターフェースとの完全な互換性
 
 ## インストール
 
@@ -38,20 +39,33 @@ uv sync --extra dev
 ### 基本的な使い方
 
 ```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from langmask import MultilingualLanguageModel
 
-# 日本語のみを許可するモデル
+# モデルとトークナイザーの準備
+base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-7B-Chat")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-7B-Chat")
+
+# 言語制御モデルの初期化（日本語のみを許可）
 model = MultilingualLanguageModel(
-    model_name="Qwen/Qwen-7B-Chat",  # 任意のHugging Faceモデル
-    allowed_languages=["JA"],         # 日本語のみを許可
-    mask_strength=0.9                 # 強めのマスキング（0~1）
+    model=base_model,
+    tokenizer=tokenizer,
+    allowed_languages=["JA"],
+    mask_strength=0.9
 )
 
 # テキスト生成
-response = model.generate(
-    prompt="AIの未来について説明してください。",
-    max_length=200
-)
+inputs = tokenizer(["AIについて説明してください"], return_tensors="pt").to(model.device)
+outputs = model.generate(**inputs, max_new_tokens=200)
+
+# 入力を除いた生成部分のみを取得
+generated_ids = [
+    output_ids[len(input_ids):] 
+    for input_ids, output_ids in zip(inputs.input_ids, outputs)
+]
+
+# デコード
+response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
 print(response)
 ```
 
@@ -60,37 +74,45 @@ print(response)
 ```python
 # 日本語と英語の両方を許可
 model = MultilingualLanguageModel(
-    model_name="Qwen/Qwen-7B-Chat",
+    model=base_model,
+    tokenizer=tokenizer,
     allowed_languages=["JA", "EN"]
 )
 
 # 英語混じりの日本語プロンプトでも、日本語と英語の応答が可能
-response = model.generate(
-    prompt="AIの未来についてexplainしてください。",
-    max_length=200
-)
+inputs = tokenizer(["AIの未来についてexplainしてください。"], return_tensors="pt").to(model.device)
+outputs = model.generate(**inputs, max_new_tokens=200)
+generated_ids = [
+    output_ids[len(input_ids):] 
+    for input_ids, output_ids in zip(inputs.input_ids, outputs)
+]
+response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
 print(response)
 ```
 
 ### 動的な言語切り替え
 
 ```python
-# モデルの初期化
+# モデルの初期化（最初は日本語のみ）
 model = MultilingualLanguageModel(
-    model_name="Qwen/Qwen-7B-Chat",
-    allowed_languages=["JA"]  # 最初は日本語のみ
+    model=base_model,
+    tokenizer=tokenizer,
+    allowed_languages=["JA"]
 )
 
 # 日本語での応答
-ja_response = model.generate("AIについて説明してください")
+ja_inputs = tokenizer(["AIについて説明してください"], return_tensors="pt").to(model.device)
+ja_outputs = model.generate(**ja_inputs, max_new_tokens=200)
 
 # 英語に切り替え
 model.set_languages(["EN"])
-en_response = model.generate("Explain about AI")
+en_inputs = tokenizer(["Explain about AI"], return_tensors="pt").to(model.device)
+en_outputs = model.generate(**en_inputs, max_new_tokens=200)
 
 # 日本語と英語の両方を許可
 model.set_languages(["JA", "EN"])
-mixed_response = model.generate("AIについてexplainしてください")
+mixed_inputs = tokenizer(["AIについてexplainしてください"], return_tensors="pt").to(model.device)
+mixed_outputs = model.generate(**mixed_inputs, max_new_tokens=200)
 ```
 
 ### マスキング強度の調整
@@ -112,6 +134,7 @@ model.set_mask_strength(1.0)
 # テキスト内のトークンを言語ごとに分類
 stats = model.debug_token_classification(
     "こんにちは、世界！Hello, World! 你好，世界！",
+    tokenizer=tokenizer,
     verbose=True  # 詳細出力
 )
 
