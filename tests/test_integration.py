@@ -24,7 +24,7 @@ def tokenizer() -> AutoTokenizer:
 @pytest.fixture
 def model(
     base_model: AutoModelForCausalLM, tokenizer: AutoTokenizer
-) -> MultilingualLanguageModel:
+) -> MultilingualLanguageModel[AutoModelForCausalLM]:
     return MultilingualLanguageModel(
         model=base_model,
         tokenizer=tokenizer,
@@ -33,7 +33,7 @@ def model(
 
 
 def test_japanese_generation(
-    model: MultilingualLanguageModel, tokenizer: AutoTokenizer
+    model: MultilingualLanguageModel[AutoModelForCausalLM], tokenizer: AutoTokenizer
 ) -> None:
     # 日本語のプロンプトを使用
     inputs = tokenizer(["こんにちは、私の名前は田中です。"], return_tensors="pt").to(
@@ -68,7 +68,7 @@ def test_japanese_generation(
 
 
 def test_language_switching(
-    model: MultilingualLanguageModel, tokenizer: AutoTokenizer
+    model: MultilingualLanguageModel[AutoModelForCausalLM], tokenizer: AutoTokenizer
 ) -> None:
     # 日本語生成
     ja_inputs = tokenizer(["こんにちは"], return_tensors="pt").to(model.device)
@@ -102,7 +102,7 @@ def test_language_switching(
 
 
 def test_mask_strength_effect(
-    model: MultilingualLanguageModel, tokenizer: AutoTokenizer
+    model: MultilingualLanguageModel[AutoModelForCausalLM], tokenizer: AutoTokenizer
 ) -> None:
     prompt = "AIについて説明してください"
     inputs = tokenizer([prompt], return_tensors="pt").to(model.device)

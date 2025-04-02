@@ -26,18 +26,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound="PreTrainedModel")
+ModelType = TypeVar("ModelType", bound=PreTrainedModel)
 
 
-class MultilingualLanguageModel(PreTrainedModel, Generic[T]):
+class MultilingualLanguageModel(PreTrainedModel, Generic[ModelType]):
     """
     A language-masked wrapper around a Hugging Face model.
     Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
     """
 
+    base_model: ModelType
+
     def __init__(
         self,
-        model: T,
+        model: ModelType,
         tokenizer: PreTrainedTokenizer,
         mask_strength: float = 0.8,
         allowed_languages: List[str] = ["JA"],
@@ -58,7 +60,7 @@ class MultilingualLanguageModel(PreTrainedModel, Generic[T]):
         # Initialize parent class with the base model's config
         super().__init__(model.config)
 
-        self.base_model: T = model
+        self.base_model: ModelType = model
         self._device: torch_device = model.device
         self.config = model.config
 
