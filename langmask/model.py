@@ -37,6 +37,7 @@ class MultilingualLanguageModel:
         token_threshold: float = 0.5,
         cache_tokens: bool = True,
         device: Optional[str] = None,
+        trust_remote_code: bool = False,
         model_kwargs: Optional[
             Dict[str, Any]
         ] = None,  # For AutoModelForCausalLM.from_pretrained
@@ -54,6 +55,7 @@ class MultilingualLanguageModel:
             token_threshold: Threshold for classifying tokens by language.
             cache_tokens: Whether to cache language-specific token IDs.
             device: The device to load the model onto ('cuda', 'cpu', or None for auto-detect).
+            trust_remote_code: Whether to trust remote code when loading the model.
             model_kwargs: Additional keyword arguments passed to AutoModelForCausalLM.from_pretrained.
             tokenizer_kwargs: Additional keyword arguments passed to AutoTokenizer.from_pretrained.
         """
@@ -64,6 +66,10 @@ class MultilingualLanguageModel:
 
         _model_kwargs = model_kwargs or {}
         _tokenizer_kwargs = tokenizer_kwargs or {}
+
+        # Add trust_remote_code to kwargs
+        _model_kwargs["trust_remote_code"] = trust_remote_code
+        _tokenizer_kwargs["trust_remote_code"] = trust_remote_code
 
         logger.info(f"Loading tokenizer: {model_name}")
         self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(
