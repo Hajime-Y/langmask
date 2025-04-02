@@ -6,7 +6,7 @@ import unicodedata
 from typing import Union
 
 
-def is_japanese_char(text: Union[str, chr]) -> bool:
+def is_japanese_char(text: str) -> bool:
     """Check if a text contains Japanese characters."""
     if len(text) == 0:
         return False
@@ -36,7 +36,7 @@ def is_japanese_char(text: Union[str, chr]) -> bool:
     return any(_is_japanese_char(char) for char in text)
 
 
-def is_chinese_char(text: Union[str, chr]) -> bool:
+def is_chinese_char(text: str) -> bool:
     """Check if a text contains Chinese characters."""
     if len(text) == 0:
         return False
@@ -60,7 +60,7 @@ def is_chinese_char(text: Union[str, chr]) -> bool:
     return any(_is_chinese_char(char) for char in text)
 
 
-def is_korean_char(text: Union[str, chr]) -> bool:
+def is_korean_char(text: str) -> bool:
     """Check if a text contains Korean characters."""
     if len(text) == 0:
         return False
