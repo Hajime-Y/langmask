@@ -3,7 +3,7 @@ High-level interface for using language-masked models.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import torch
 from torch import device as torch_device
@@ -26,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class MultilingualLanguageModel(PreTrainedModel):
+class MultilingualLanguageModel(PreTrainedModel):  # type: ignore[misc]
     """
     A language-masked wrapper around a Hugging Face model.
     Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
