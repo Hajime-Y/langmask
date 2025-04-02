@@ -8,21 +8,23 @@ from langmask.masker import MultilingualTokenMasker
 
 
 @pytest.fixture
-def tokenizer():
+def tokenizer() -> AutoTokenizer:
     return AutoTokenizer.from_pretrained(
         "Qwen/Qwen2.5-0.5B-Instruct", trust_remote_code=True
     )
 
 
 @pytest.fixture
-def model():
+def model() -> AutoModelForCausalLM:
     return AutoModelForCausalLM.from_pretrained(
         "Qwen/Qwen2.5-0.5B-Instruct", trust_remote_code=True
     )
 
 
 @pytest.fixture
-def masker(model, tokenizer) -> MultilingualTokenMasker:
+def masker(
+    model: AutoModelForCausalLM, tokenizer: AutoTokenizer
+) -> MultilingualTokenMasker:
     return MultilingualTokenMasker(
         tokenizer=tokenizer, model=model, allowed_languages=["JA", "EN"]
     )
@@ -52,7 +54,9 @@ def test_language_switching(masker: MultilingualTokenMasker) -> None:
     assert set(masker.allowed_languages) == {"JA", "EN"}
 
 
-def test_logits_processor(masker: MultilingualTokenMasker, tokenizer) -> None:
+def test_logits_processor(
+    masker: MultilingualTokenMasker, tokenizer: AutoTokenizer
+) -> None:
     # テスト用のlogitsを作成
     vocab_size = len(tokenizer)
     batch_size = 1

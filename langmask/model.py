@@ -3,7 +3,7 @@ High-level interface for using language-masked models.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 import torch
 from transformers import (
@@ -12,6 +12,8 @@ from transformers import (
     PreTrainedModel,
     PreTrainedTokenizer,
 )
+from transformers.modeling_utils import GenerationMixin as BaseGenerationMixin
+from transformers.modeling_utils import PreTrainedModel as BasePreTrainedModel
 
 from .language_codes import SUPPORTED_LANGUAGES
 from .masker import MultilingualTokenMasker
@@ -23,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class MultilingualLanguageModel(PreTrainedModel, GenerationMixin):
+class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
     """
     A language-masked wrapper around a Hugging Face model.
     Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
@@ -73,7 +75,7 @@ class MultilingualLanguageModel(PreTrainedModel, GenerationMixin):
         input_ids: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         **kwargs: Any,
-    ) -> Any:
+    ) -> Dict[str, Any]:
         """
         Forward pass of the model.
         Delegates to the base model's forward pass.
