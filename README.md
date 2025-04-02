@@ -1,5 +1,13 @@
 # LangMask
 
+> **注意**: このプロジェクトは失敗プロジェクトとして終了しました。
+> 
+> 失敗の主な理由：
+> 1. テストを重視しすぎたことでコードが必要以上に複雑化してしまいました。
+> 2. `model`と`masker`の設計が適切ではありませんでした。HuggingFaceの`LogitsProcessor`を使用することで、より簡潔に同様の機能を実装できることが判明しました。
+>
+> このリポジトリは今後アーカイブされます。
+
 [![PyPI version](https://badge.fury.io/py/langmask.svg)](https://badge.fury.io/py/langmask)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/release/python-390/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
