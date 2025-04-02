@@ -27,7 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
+class MultilingualLanguageModel(PreTrainedModel):
     """
     A language-masked wrapper around a Hugging Face model.
     Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
@@ -67,7 +67,7 @@ class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
         self.masker = MultilingualTokenMasker(
             tokenizer=tokenizer,
             model=model,
-            device=self._device,
+            device=str(self._device),  # Convert device to string
             default_mask_strength=mask_strength,
             allowed_languages=allowed_languages,
             token_threshold=token_threshold,
