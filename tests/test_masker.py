@@ -61,12 +61,13 @@ def test_logits_processor(
     vocab_size = len(tokenizer)
     batch_size = 1
     logits = torch.randn(batch_size, vocab_size, device=masker.device)
+    input_ids = torch.randint(0, vocab_size, (batch_size, 1), device=masker.device)
 
     # logits_processorを取得
     processor = masker.logits_processor()
 
     # プロセッサを適用
-    modified_logits = processor(None, logits)
+    modified_logits = processor(input_ids, logits)
 
     # 形状が保持されていることを確認
     assert modified_logits.shape == logits.shape

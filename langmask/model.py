@@ -3,15 +3,17 @@ High-level interface for using language-masked models.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, cast
 
 import torch
+from torch import device as torch_device
 from transformers import (
     AutoModelForCausalLM,
     GenerationMixin,
     PreTrainedModel,
     PreTrainedTokenizer,
 )
+from transformers.generation.utils import GenerateOutput
 from transformers.modeling_utils import GenerationMixin as BaseGenerationMixin
 from transformers.modeling_utils import PreTrainedModel as BasePreTrainedModel
 
@@ -30,6 +32,9 @@ class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
     A language-masked wrapper around a Hugging Face model.
     Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
     """
+
+    base_model: PreTrainedModel
+    _device: torch_device
 
     def __init__(
         self,
@@ -80,11 +85,12 @@ class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
         Forward pass of the model.
         Delegates to the base model's forward pass.
         """
-        return self.base_model(
+        output = self.base_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             **kwargs,
         )
+        return cast(Dict[str, Any], output)
 
     def prepare_inputs_for_generation(
         self, input_ids: torch.Tensor, **kwargs: Any
@@ -93,7 +99,8 @@ class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
         Prepare inputs for generation.
         Delegates to the base model's preparation method.
         """
-        return self.base_model.prepare_inputs_for_generation(input_ids, **kwargs)
+        output = self.base_model.prepare_inputs_for_generation(input_ids, **kwargs)
+        return cast(Dict[str, Any], output)
 
     def _reorder_cache(self, past: Any, beam_idx: torch.Tensor) -> Any:
         """
@@ -130,11 +137,12 @@ class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
         if "eos_token_id" not in kwargs and hasattr(self.config, "eos_token_id"):
             kwargs["eos_token_id"] = self.config.eos_token_id
 
-        return self.base_model.generate(
+        output = self.base_model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
             **kwargs,
         )
+        return cast(Union[torch.Tensor, Dict[str, Any]], output)
 
     # --- Configuration Methods ---
 
@@ -171,12 +179,12 @@ class MultilingualLanguageModel(BasePreTrainedModel, BaseGenerationMixin):
         return self.masker.debug_token_classification(text, verbose=verbose)
 
     @property
-    def device(self) -> torch.device:
+    def device(self) -> torch_device:
         """Get the device the model is on."""
         return self._device
 
     @device.setter
-    def device(self, device: Union[str, torch.device]) -> None:
+    def device(self, device: Union[str, torch_device]) -> None:
         """Set the device for the model."""
         self._device = torch.device(device)
         self.base_model.to(self._device)
