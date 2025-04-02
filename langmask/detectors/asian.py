@@ -31,7 +31,7 @@ def is_japanese_char(text: Union[str, chr]) -> bool:
     # 1文字の場合は直接チェック
     if len(text) == 1:
         return _is_japanese_char(text)
-    
+
     # 複数文字の場合は1文字ずつチェック
     return any(_is_japanese_char(char) for char in text)
 
@@ -55,7 +55,7 @@ def is_chinese_char(text: Union[str, chr]) -> bool:
     # 1文字の場合は直接チェック
     if len(text) == 1:
         return _is_chinese_char(text)
-    
+
     # 複数文字の場合は1文字ずつチェック
     return any(_is_chinese_char(char) for char in text)
 
@@ -85,6 +85,6 @@ def is_korean_char(text: Union[str, chr]) -> bool:
     # 1文字の場合は直接チェック
     if len(text) == 1:
         return _is_korean_char(text)
-    
+
     # 複数文字の場合は1文字ずつチェック
     return any(_is_korean_char(char) for char in text)
