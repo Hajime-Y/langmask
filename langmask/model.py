@@ -3,7 +3,7 @@ High-level interface for using language-masked models.
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Type, Union, cast
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union, cast
 
 import torch
 from torch import device as torch_device
@@ -26,6 +26,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T", bound=PreTrainedModel)
+
 
 class MultilingualLanguageModel(PreTrainedModel):
     """
@@ -33,12 +35,12 @@ class MultilingualLanguageModel(PreTrainedModel):
     Inherits from PreTrainedModel to maintain compatibility with the Hugging Face ecosystem.
     """
 
-    base_model: PreTrainedModel
+    base_model: T
     _device: torch_device
 
     def __init__(
         self,
-        model: PreTrainedModel,
+        model: T,
         tokenizer: PreTrainedTokenizer,
         mask_strength: float = 0.8,
         allowed_languages: List[str] = ["JA"],
@@ -57,7 +59,7 @@ class MultilingualLanguageModel(PreTrainedModel):
             cache_tokens: Whether to cache language-specific token IDs.
         """
         # Initialize parent class with the base model's config
-        super().__init__(model.config)
+        super().__init__(cast(PreTrainedModel, model).config)
 
         self.base_model = model
         self._device = model.device
